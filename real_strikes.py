@@ -1,22 +1,97 @@
 from ib_insync import *
 import pandas as pd
-import math
+# import logging
+# logging.basicConfig(level=logging.INFO)
+# def close_orders():
+#     pass
 
-def net_premium(sc, lc, sp, lp):
-    return sc + sp - lc - lp
+# def close_open_positions():
+
+# #     positions = ib.portfolio()
+
+# #     for position in positions:
+# #         contract = position.contract
+# #         action = None
+# #         sqoff = None
+# #         # sqoff = Stock(pos.contract.symbol,"SMART",pos.contract.currency)
+# #         if contract.secType == 'STK':
+# #             if position.position > 0:
+# #                 action = 'SELL'
+# #                 sqoff = Stock(contract.symbol, contract.exchange, contract.currency)
+# #             elif position.position < 0:
+# #                 action = 'BUY'
+# #                 sqoff = Stock(contract.symbol, contract.exchange, contract.currency)
+# # # sqoff = Option(pos.contract.symbol,pos.contract.lastTradeDateOrContractMonth,pos.contract.strike,pos.contract.right,"SMART",pos.contract.multiplier,pos.contract.currency)
+
+# #         elif contract.secType == 'OPT':
+# #             if position.position > 0:
+# #                 action = 'SELL'
+# #                 sqoff = Option(
+# #                     contract.symbol,
+# #                     contract.lastTradeDateOrContractMonth,
+# #                     contract.strike,
+# #                     contract.right,
+# #                     contract.exchange,
+# #                     contract.multiplier,
+# #                     contract.currency
+# #                 )
+# #             elif position.position < 0:
+# #                 action = 'BUY'
+# #                 sqoff = Option(
+# #                     contract.symbol,
+# #                     contract.lastTradeDateOrContractMonth,
+# #                     contract.strike,
+# #                     contract.right,
+# #                     contract.exchange,
+# #                     contract.multiplier,
+# #                     contract.currency
+# #                 )
+
+# #         if action and sqoff:
+# #             # Qualify the contract
+# #             ib.qualifyContracts(sqoff)
+
+# #             # Place a market order to close the position
+# #             order = MarketOrder(action, abs(position.position))
+# #             ib.placeOrder(sqoff, order)
+# #             print("Positions squared off successfully")
 
 
 
+#     possy = ib.portfolio()
+#     print(possy)
+#     for pos in possy :
+#         contract = pos.contract
+#         if contract.secType == 'STK' :
+#             if pos.position > 0 :
+#                 action = 'SELL'
+#                 sqoff = Stock(pos.contract.symbol,"SMART",pos.contract.currency)
+#                 ib.qualifyContracts(sqoff)
+#             elif pos.position < 0 :
+#                 action = 'BUY'
+#                 sqoff = Stock(pos.contract.symbol,"SMART",pos.contract.currency)
+#                 ib.qualifyContracts(sqoff)
+#         elif contract.secType == 'OPT':
+#             if pos.position > 0 :
+#                 action = 'SELL'
+#                 sqoff = Option(pos.contract.symbol,pos.contract.lastTradeDateOrContractMonth,pos.contract.strike,pos.contract.right,"SMART",pos.contract.multiplier,pos.contract.currency)
+#                 ib.qualifyContracts(sqoff)
+#             elif pos.position < 0 :
+#                 action = 'BUY'
+#                 sqoff = Option(pos.contract.symbol,pos.contract.lastTradeDateOrContractMonth,pos.contract.strike,pos.contract.right,"SMART",pos.contract.multiplier,pos.contract.currency)
+#                 ib.qualifyContracts(sqoff)
+#         Order = MarketOrder(action, abs(pos.position))
+#         ib.placeOrder(sqoff, Order)
 ib = IB()
-ib.connect('127.0.0.1', 7497, clientId=1)
+ib.connect('127.0.0.1', 7497, clientId=225)
 spx = Index('SPX', 'CBOE')
-
 ib.qualifyContracts(spx)
 cds = ib.reqContractDetails(spx)
-ib.reqMarketDataType(4)
+ib.reqMarketDataType(1)
 [ticker] = ib.reqTickers(spx)
-spxValue = (ticker.marketPrice() // 5) * 5
+spxValue = ticker.marketPrice()
 print(spxValue)
+spxValue = 4783
 chains = ib.reqSecDefOptParams(spx.symbol, '', spx.secType, spx.conId)
 
 util.df(chains)
@@ -37,140 +112,138 @@ contracts = [Option('SPX', desired_expiration, strike, right, 'SMART')
              for strike in strikes]
 Option()
 contracts = ib.qualifyContracts(*contracts)
-print(contracts)
-
-
-# Create tickers for all contracts
+print(len(contracts))
 tickers = ib.reqTickers(*contracts)
-print(tickers[-1])
+call_deltas = [0.05, 0.1]
+put_deltas = [-0.05, -0.1]
 
-# Filter call_strikes based on market prices between 1 and 2
-# filtered_calls = [call for call, ticker in zip(contracts, tickers) if call.right == 'C' and 1 <= ticker.marketPrice() <= 2]
-# call_strikes = [call.strike for call in filtered_calls]
-# filtered_calls_long = [call for call, ticker in zip(contracts, tickers) if call.right == 'C' and 0 <= ticker.marketPrice() <= 1]
-# print("Call strikes 1 to 2 ",call_strikes)
-# long_strikes = [call.strike for call in filtered_calls_long]
-# print("call strikes 0 to 1 ",long_strikes)
-# # Filter call_strikes based on market prices between 1 and 2
-# filtered_puts = [put for put, ticker in zip(contracts, tickers) if put.right == 'P' and 1 <= ticker.marketPrice() <= 2]
-# put_strikes = [put.strike for put in filtered_puts]
+# Filter call and put tickers based on delta conditions
+call_tickers = [ticker for ticker in tickers if ticker.contract.right == 'C' and call_deltas[0] < ticker.modelGreeks.delta < call_deltas[1]]
+put_tickers = [ticker for ticker in tickers if ticker.contract.right == 'P' and put_deltas[0] > ticker.modelGreeks.delta > put_deltas[1]]
 
-# filtered_puts_long = [put for put, ticker in zip(contracts, tickers) if put.right == 'P' and 0 <= ticker.marketPrice() <= 1]
-# long_put_strikes = [put.strike for put in filtered_puts_long]
+# Check if the lists are not empty before finding the maximum
+max_ltp_call = max(call_tickers, key=lambda ticker: ticker.last, default=None)
+max_ltp_put = max(put_tickers, key=lambda ticker: ticker.last, default=None)
 
-# print("Put Strikes (1 to 2):", put_strikes)
-# print("Put Strikes (0 to 1):", long_put_strikes)
-# filtered_calls = [call for call, ticker in zip(contracts, tickers) if call.right == 'C' and 0.05 <= ticker.modelGreeks < 0.01]
-# call_strikes = [call.strike for call in filtered_calls]
-# print(call_strikes)
-# filtered_calls = [call for call, ticker in zip(contracts, tickers) if call.right == 'C']
+# Return the strikes of the calls and puts with maximum LTP if they exist
+if max_ltp_call:
+    max_ltp_call_strike = max_ltp_call.contract.strike
+    print(f"Strike of Call with Max LTP: {max_ltp_call_strike}")
+else:
+    print("No eligible call options found.")
 
-# for call, ticker in zip(filtered_calls, ticker):
-#     print(f"Strike: {call.strike}, Model Greeks: {ticker.modelGreeks}")
-# filtered_calls_long = [call for call, ticker in zip(contracts, tickers) if call.right == 'C' and 0 <= ticker.marketPrice() < 1.5]
-# long_strikes = [call.strike for call in filtered_calls_long]
+if max_ltp_put:
+    max_ltp_put_strike = max_ltp_put.contract.strike
+    print(f"Strike of Put with Max LTP: {max_ltp_put_strike}")
+else:
+    print("No eligible put options found.")
 
-# filtered_puts = [put for put, ticker in zip(contracts, tickers) if put.right == 'P' and 0 <= ticker.marketPrice() < 1.9]
-# put_strikes = [put.strike for put in filtered_puts]
+offset = 30
 
-# filtered_puts_long = [put for put, ticker in zip(contracts, tickers) if put.right == 'P' and 0 <= ticker.marketPrice() < 1.2]
-# long_put_strikes = [put.strike for put in filtered_puts_long]
+# Store short put and short call contracts in a list
+short_put_contract = max_ltp_put.contract
+short_call_contract = max_ltp_call.contract
+short_contracts = [short_put_contract, short_call_contract]
 
-# # Initialize variables to store the result
-# max_premium_difference = -float('inf')
-# result_strikes = None
+# Qualify the short contracts using ib.qualifyContracts
+ib.qualifyContracts(*short_contracts)
 
-# # Tolerance for comparing strike differences
-# tolerance = 1e-5
+# Now, qualify the long put and long call contracts
+long_put_contract = Contract()
+long_put_contract.symbol = short_put_contract.symbol
+long_put_contract.secType = short_put_contract.secType
+long_put_contract.lastTradeDateOrContractMonth = short_put_contract.lastTradeDateOrContractMonth
+long_put_contract.strike = short_put_contract.strike - offset
+long_put_contract.right = 'P'  # Put option
+long_put_contract.exchange = short_put_contract.exchange
 
-# # Iterate through the two call lists
-# for strike_0_to_1 in long_strikes:
-#     for strike_1_to_2 in call_strikes:
-#         # Compute the difference in strike
-#         strike_difference =   strike_0_to_1 - strike_1_to_2
+long_call_contract = Contract()
+long_call_contract.symbol = short_call_contract.symbol
+long_call_contract.secType = short_call_contract.secType
+long_call_contract.lastTradeDateOrContractMonth = short_call_contract.lastTradeDateOrContractMonth
+long_call_contract.strike = short_call_contract.strike + offset
+long_call_contract.right = 'C'  # Call option
+long_call_contract.exchange = short_call_contract.exchange
 
-#         # Check if the difference is between 25 and 35 with tolerance
-#         if 25 - tolerance <= strike_difference <= 35 + tolerance:
-#             # Find the corresponding option contracts
-#             call_contract_0_to_1 = next(c for c in filtered_calls_long if math.isclose(c.strike, strike_0_to_1, abs_tol=tolerance))
-#             call_contract_1_to_2 = next(c for c in filtered_calls if math.isclose(c.strike, strike_1_to_2, abs_tol=tolerance))
+# Use ib.qualifyContracts to get additional contract details for the long contracts
+ib.qualifyContracts(long_put_contract, long_call_contract)
 
-#             # Convert contracts to tickers and request market prices
-#             ticker_0_to_1 = ib.reqTickers(call_contract_0_to_1)[0]
-#             ticker_1_to_2 = ib.reqTickers(call_contract_1_to_2)[0]
+# Now you have qualified contracts for both short and long options
+print("Qualified Short Put Contract:", short_put_contract)
+print("Qualified Long Put Contract:", long_put_contract)
+print("Qualified Short Call Contract:", short_call_contract)
 
-#             # Compute the premium difference
-#             premium_difference = ticker_1_to_2.marketPrice() - ticker_0_to_1.marketPrice()
+print("Qualified Long Call Contract:", long_call_contract)    
+short_put_md = ib.reqTickers(short_put_contract)[0]
+short_call_md = ib.reqTickers(short_call_contract)[0]
+long_put_md = ib.reqTickers(long_put_contract)[0]
+long_call_md = ib.reqTickers(long_call_contract)[0]
 
-#             # Update the result if the premium difference is greater
-#             if premium_difference > max_premium_difference:
-#                 max_premium_difference = premium_difference
-#                 result_strikes = (strike_0_to_1, strike_1_to_2)
+# Calculate the net premium
+net_premium = (short_put_md.marketPrice() + short_call_md.marketPrice()) - (long_put_md.marketPrice() + long_call_md.marketPrice())
+print(net_premium)
+#Very important code that works on real account but not on demo
+# combo_legs = [
+#     ComboLeg(conId=short_put_contract.conId, ratio=-1, action='SELL', exchange=short_put_contract.exchange),
+#     ComboLeg(conId=long_put_contract.conId, ratio=1, action='BUY', exchange=long_put_contract.exchange),
+#     ComboLeg(conId=short_call_contract.conId, ratio=-1, action='SELL', exchange=short_call_contract.exchange),
+#     ComboLeg(conId=long_call_contract.conId, ratio=1, action='BUY', exchange=long_call_contract.exchange),
+# ]
+# combo = Bag(symbol = 'SPX',exchange = 'SMART', currency = 'USD',comboLegs = combo_legs)
+# trade = ib.placeOrder(combo,MarketOrder("SELL",1))
+long_put_order = MarketOrder('BUY', 1)
+long_put_entry = ib.placeOrder(long_put_contract, long_put_order)
+print("Market order for Long Put placed.")
+ib.sleep(2)
+lp = long_put_entry.orderStatus.avgFillPrice
 
-# # Print the result
-# print("Result Strikes with Max Premium Difference:", result_strikes)
+long_call_order = MarketOrder('BUY', 1)
+long_call_entry = ib.placeOrder(long_call_contract, long_call_order)
+print("Market order for Long Call placed.")
+ib.sleep(2)
+lc = long_call_entry.orderStatus.avgFillPrice
+short_put_order = MarketOrder('SELL', 1)
+short_put_entry = ib.placeOrder(short_put_contract, short_put_order)
+print("Market order for Short Put placed.")
+ib.sleep(2)
+sp = short_put_entry.orderStatus.avgFillPrice
+print(f"{short_put_entry.filled()} is fill price")
+# Place market order for long put
 
-# max_premium_difference_puts = -float('inf')
-# result_strikes_puts = None
 
-# # Tolerance for comparing strike differences
-# tolerance = 1e-5
-# # Iterate through the two put lists
-# for strike_0_to_1_put in long_put_strikes:
-#     for strike_1_to_2_put in put_strikes:
-#         # Compute the difference in strike
-#         strike_difference_put =  strike_1_to_2_put - strike_0_to_1_put 
-#         # print(f"{strike_0_to_1_put} {strike_1_to_2_put} {strike_difference_put}")  # Corrected variable name
 
-#         # Check if the difference is between 25 and 35 with tolerance
-#         if 25 - tolerance <= strike_difference_put <= 35 + tolerance:
-#             # Find the corresponding option contracts
-#             put_contract_0_to_1 = next(c for c in filtered_puts_long if math.isclose(c.strike, strike_0_to_1_put, abs_tol=tolerance))
-#             put_contract_1_to_2 = next(c for c in filtered_puts if math.isclose(c.strike, strike_1_to_2_put, abs_tol=tolerance))
-
-#             # Convert contracts to tickers and request market prices
-#             ticker_0_to_1_put = ib.reqTickers(put_contract_0_to_1)[0]
-#             ticker_1_to_2_put = ib.reqTickers(put_contract_1_to_2)[0]
-
-#             # Compute the premium difference
-#             premium_difference_put = ticker_1_to_2_put.marketPrice() - ticker_0_to_1_put.marketPrice()
-
-#             # Update the result if the premium difference is greater
-#             if premium_difference_put > max_premium_difference_puts:
-#                 max_premium_difference_puts = premium_difference_put
-#                 result_strikes_puts = (strike_0_to_1_put, strike_1_to_2_put)
-# net_premium = (
-#     ticker_1_to_2.marketPrice() - ticker_0_to_1.marketPrice() +
-#     ticker_1_to_2_put.marketPrice() - ticker_0_to_1_put.marketPrice()
-# )
-# print(f"short call {ticker_1_to_2.marketPrice()} long call {ticker_0_to_1.marketPrice()} short put {ticker_1_to_2_put.marketPrice()} long put {ticker_0_to_1_put.marketPrice()}")
-# print("Net Premium:", net_premium)
-# # Print the result for puts
-# print("Result Strikes with Max Premium Difference (Puts):", result_strikes_puts)
-
-# def place_market_order(contract, action, quantity):
-#     order = MarketOrder(action, quantity)
-#     trade = ib.placeOrder(contract, order)
-#     print(f"Placed {action} order for {quantity} contracts: {contract}")
-#     return trade
-
-# # Place market orders for long calls
-# # Assuming result_strikes is a tuple (strike_0_to_1, strike_1_to_2) for calls
-# strike_0_to_1, strike_1_to_2 = result_strikes
-
-# # Place market order to buy the long call (strike_0_to_1)
-# place_market_order(filtered_calls_long[long_strikes.index(strike_0_to_1)], 'BUY', 1)
-
-# # Place market order to sell the short call (strike_1_to_2)
-# place_market_order(filtered_calls[call_strikes.index(strike_1_to_2)], 'SELL', 1)
-
-# # Assuming result_strikes_puts is a tuple (strike_0_to_1_put, strike_1_to_2_put) for puts
-# strike_0_to_1_put, strike_1_to_2_put = result_strikes_puts
-
-# # Place market order to buy the long put (strike_0_to_1_put)
-# place_market_order(filtered_puts_long[long_put_strikes.index(strike_0_to_1_put)], 'BUY', 1)
-
-# # Place market order to sell the short put (strike_1_to_2_put)
-# place_market_order(filtered_puts[put_strikes.index(strike_1_to_2_put)], 'SELL', 1)
-
-# print(f"{result_strikes}{result_strikes_puts}")
+# Place market order for short call
+short_call_order = MarketOrder('SELL', 1)
+short_call_entry = ib.placeOrder(short_call_contract, short_call_order)
+print("Market order for Short Call placed.")
+ib.sleep(2)
+sc = short_call_entry.orderStatus.avgFillPrice
+executed_premium = sp + sc - lp - lc #arbitrary
+print(f"{executed_premium} is the executed premium")
+# Place market order for long call
+while True:
+    print("entered here")
+    net_premium = (short_put_md.marketPrice() + short_call_md.marketPrice()) - (long_put_md.marketPrice() + long_call_md.marketPrice())
+    print(f"{net_premium} is net premium")
+    if net_premium > executed_premium + 0.05 :
+        diff1 = 5*executed_premium / 100
+        diff2 = 15*executed_premium / 100
+        print(diff1)
+        print(diff2)
+        sl_short_call = StopLimitOrder("BUY", short_call_entry.filled(), short_call_md.marketPrice()*diff1+short_call_md.marketPrice(), short_call_md.marketPrice()*diff2+short_call_md.marketPrice())
+        sl_short_put = StopLimitOrder("BUY", short_put_entry.filled(), short_put_md.marketPrice()*diff1+short_put_md.marketPrice(),short_put_md.marketPrice()*diff2+short_put_md.marketPrice())
+        sl_long_call = StopLimitOrder("SELL", long_call_entry.filled(), long_call_md.marketPrice()*diff1-long_call_md.marketPrice(),long_call_md.marketPrice()*diff2-long_call_md.marketPrice())
+        sl_long_put = StopLimitOrder("SELL", long_put_entry.filled(), long_put_md.marketPrice()*diff1-long_put_md.marketPrice(),long_put_md.marketPrice()*diff2-long_put_md.marketPrice())
+        
+        # Place the stop-loss orders
+        ib.placeOrder(short_call_contract, sl_short_call)
+        ib.placeOrder(short_put_contract, sl_short_put)
+        ib.placeOrder(long_call_contract, sl_long_call)
+        ib.placeOrder(long_put_contract, sl_long_put)
+        
+        
+    elif net_premium > executed_premium + 35 :
+        #close_open_positions()
+        #close_orders()
+        break
+    ib.sleep(5)
