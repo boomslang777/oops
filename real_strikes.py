@@ -5,83 +5,83 @@ import pandas as pd
 # def close_orders():
 #     pass
 
-# def close_open_positions():
+def close_open_positions():
 
-# #     positions = ib.portfolio()
+#     positions = ib.portfolio()
 
-# #     for position in positions:
-# #         contract = position.contract
-# #         action = None
-# #         sqoff = None
-# #         # sqoff = Stock(pos.contract.symbol,"SMART",pos.contract.currency)
-# #         if contract.secType == 'STK':
-# #             if position.position > 0:
-# #                 action = 'SELL'
-# #                 sqoff = Stock(contract.symbol, contract.exchange, contract.currency)
-# #             elif position.position < 0:
-# #                 action = 'BUY'
-# #                 sqoff = Stock(contract.symbol, contract.exchange, contract.currency)
-# # # sqoff = Option(pos.contract.symbol,pos.contract.lastTradeDateOrContractMonth,pos.contract.strike,pos.contract.right,"SMART",pos.contract.multiplier,pos.contract.currency)
-
-# #         elif contract.secType == 'OPT':
-# #             if position.position > 0:
-# #                 action = 'SELL'
-# #                 sqoff = Option(
-# #                     contract.symbol,
-# #                     contract.lastTradeDateOrContractMonth,
-# #                     contract.strike,
-# #                     contract.right,
-# #                     contract.exchange,
-# #                     contract.multiplier,
-# #                     contract.currency
-# #                 )
-# #             elif position.position < 0:
-# #                 action = 'BUY'
-# #                 sqoff = Option(
-# #                     contract.symbol,
-# #                     contract.lastTradeDateOrContractMonth,
-# #                     contract.strike,
-# #                     contract.right,
-# #                     contract.exchange,
-# #                     contract.multiplier,
-# #                     contract.currency
-# #                 )
-
-# #         if action and sqoff:
-# #             # Qualify the contract
-# #             ib.qualifyContracts(sqoff)
-
-# #             # Place a market order to close the position
-# #             order = MarketOrder(action, abs(position.position))
-# #             ib.placeOrder(sqoff, order)
-# #             print("Positions squared off successfully")
-
-
-
-#     possy = ib.portfolio()
-#     print(possy)
-#     for pos in possy :
-#         contract = pos.contract
-#         if contract.secType == 'STK' :
-#             if pos.position > 0 :
+#     for position in positions:
+#         contract = position.contract
+#         action = None
+#         sqoff = None
+#         # sqoff = Stock(pos.contract.symbol,"SMART",pos.contract.currency)
+#         if contract.secType == 'STK':
+#             if position.position > 0:
 #                 action = 'SELL'
-#                 sqoff = Stock(pos.contract.symbol,"SMART",pos.contract.currency)
-#                 ib.qualifyContracts(sqoff)
-#             elif pos.position < 0 :
+#                 sqoff = Stock(contract.symbol, contract.exchange, contract.currency)
+#             elif position.position < 0:
 #                 action = 'BUY'
-#                 sqoff = Stock(pos.contract.symbol,"SMART",pos.contract.currency)
-#                 ib.qualifyContracts(sqoff)
+#                 sqoff = Stock(contract.symbol, contract.exchange, contract.currency)
+# # sqoff = Option(pos.contract.symbol,pos.contract.lastTradeDateOrContractMonth,pos.contract.strike,pos.contract.right,"SMART",pos.contract.multiplier,pos.contract.currency)
+
 #         elif contract.secType == 'OPT':
-#             if pos.position > 0 :
+#             if position.position > 0:
 #                 action = 'SELL'
-#                 sqoff = Option(pos.contract.symbol,pos.contract.lastTradeDateOrContractMonth,pos.contract.strike,pos.contract.right,"SMART",pos.contract.multiplier,pos.contract.currency)
-#                 ib.qualifyContracts(sqoff)
-#             elif pos.position < 0 :
+#                 sqoff = Option(
+#                     contract.symbol,
+#                     contract.lastTradeDateOrContractMonth,
+#                     contract.strike,
+#                     contract.right,
+#                     contract.exchange,
+#                     contract.multiplier,
+#                     contract.currency
+#                 )
+#             elif position.position < 0:
 #                 action = 'BUY'
-#                 sqoff = Option(pos.contract.symbol,pos.contract.lastTradeDateOrContractMonth,pos.contract.strike,pos.contract.right,"SMART",pos.contract.multiplier,pos.contract.currency)
-#                 ib.qualifyContracts(sqoff)
-#         Order = MarketOrder(action, abs(pos.position))
-#         ib.placeOrder(sqoff, Order)
+#                 sqoff = Option(
+#                     contract.symbol,
+#                     contract.lastTradeDateOrContractMonth,
+#                     contract.strike,
+#                     contract.right,
+#                     contract.exchange,
+#                     contract.multiplier,
+#                     contract.currency
+#                 )
+
+#         if action and sqoff:
+#             # Qualify the contract
+#             ib.qualifyContracts(sqoff)
+
+#             # Place a market order to close the position
+#             order = MarketOrder(action, abs(position.position))
+#             ib.placeOrder(sqoff, order)
+#             print("Positions squared off successfully")
+
+
+
+    possy = ib.portfolio()
+    print(possy)
+    for pos in possy :
+        contract = pos.contract
+        if contract.secType == 'STK' :
+            if pos.position > 0 :
+                action = 'SELL'
+                sqoff = Stock(pos.contract.symbol,"SMART",pos.contract.currency)
+                ib.qualifyContracts(sqoff)
+            elif pos.position < 0 :
+                action = 'BUY'
+                sqoff = Stock(pos.contract.symbol,"SMART",pos.contract.currency)
+                ib.qualifyContracts(sqoff)
+        elif contract.secType == 'OPT':
+            if pos.position > 0 :
+                action = 'SELL'
+                sqoff = Option(pos.contract.symbol,pos.contract.lastTradeDateOrContractMonth,pos.contract.strike,pos.contract.right,"SMART",pos.contract.multiplier,pos.contract.currency)
+                ib.qualifyContracts(sqoff)
+            elif pos.position < 0 :
+                action = 'BUY'
+                sqoff = Option(pos.contract.symbol,pos.contract.lastTradeDateOrContractMonth,pos.contract.strike,pos.contract.right,"SMART",pos.contract.multiplier,pos.contract.currency)
+                ib.qualifyContracts(sqoff)
+        Order = MarketOrder(action, abs(pos.position))
+        ib.placeOrder(sqoff, Order)
 ib = IB()
 ib.connect('127.0.0.1', 7497, clientId=225)
 spx = Index('SPX', 'CBOE')
@@ -91,7 +91,6 @@ ib.reqMarketDataType(1)
 [ticker] = ib.reqTickers(spx)
 spxValue = ticker.marketPrice()
 print(spxValue)
-spxValue = 4783
 chains = ib.reqSecDefOptParams(spx.symbol, '', spx.secType, spx.conId)
 
 util.df(chains)
@@ -240,9 +239,11 @@ while True:
         ib.placeOrder(short_put_contract, sl_short_put)
         ib.placeOrder(long_call_contract, sl_long_call)
         ib.placeOrder(long_put_contract, sl_long_put)
+        break       
         
-        
-    elif net_premium > executed_premium + 35 :
+while True :
+    net_premium =   (short_put_md.marketPrice() + short_call_md.marketPrice()) - (long_put_md.marketPrice() + long_call_md.marketPrice())       
+    if net_premium > executed_premium + 35 :
         #close_open_positions()
         #close_orders()
         break
