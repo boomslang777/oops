@@ -90,10 +90,11 @@ def place_sl_order(instrument, qty,kite):
         legs = qty//900
         if qty%900 != 0 :
             legs += 1
+        iceberg_qty = quantity//legs   
         kite.place_order(variety=kite.VARIETY_ICEBERG,exchange = "NFO"
                          ,tradingsymbol=instrument,transaction_type = 'SELL',quantity=qty,
                          order_type="SL",product="MIS",validity="DAY",
-                         iceberg_legs = legs,price =mark_price-80,trigger_price =mark_price-75)
+                         iceberg_legs = legs,price =mark_price-80,trigger_price =mark_price-75,iceberg_quantity  = iceberg_qty)
              
 
 def place_iceberg_limit_order(kite, tradingsymbol, quantity, price):
@@ -107,31 +108,42 @@ def place_iceberg_limit_order(kite, tradingsymbol, quantity, price):
     order_type (str): The order type ('MARKET' or 'LIMIT').
     price (float, optional): The price for limit orders.
     """
-
+    mark = get_ltp(kite,tradingsymbol)
     # Calculate the number of legs
-    legs = quantity // 900
-    if quantity % 900 != 0:
-        legs += 1
-
-    # Place the order
-    try:
-        order_id = kite.place_order(
-            tradingsymbol=tradingsymbol,
-            quantity=quantity,
-            order_type='LIMIT',
-            price=price,
-            product=kite.PRODUCT_MIS,
-            exchange=kite.EXCHANGE_NSE,
-            transaction_type=kite.TRANSACTION_TYPE_BUY,
-            validity=kite.VALIDITY_DAY,
-            disclosed_quantity=900,
-            tag="Iceberg",
-            variety=kite.VARIETY_ICEBERG,
-            iceberg_legs = legs
-        )
-        print(f"Order placed successfully. Order ID: {order_id}.")
-    except Exception as e:
-        print(f"An error occurred while placing the order: {e}")
+    if qty >0 and qty < 900 :
+        kite.place_order(variety=kite.VARIETY_REGULAR, exchange="NFO",
+                        tradingsymbol=instrument,
+                        transaction_type="BUY",
+                        quantity=qty,
+                        order_type="LMT",
+                        product="MIS",
+                        validity="DAY",
+                        price=mark)
+        print("Position entered successfully")
+    else : 
+        legs = quantity // 900
+        if quantity % 900 != 0:
+            legs += 1
+        iceberg_qty = quantity//legs
+        # Place the order
+        try:
+            order_id = kite.place_order(
+                tradingsymbol=tradingsymbol,
+                quantity=quantity,
+                order_type='LIMIT',
+                price=price,
+                product=kite.PRODUCT_MIS,
+                exchange=kite.EXCHANGE_NSE,
+                transaction_type=kite.TRANSACTION_TYPE_BUY,
+                validity=kite.VALIDITY_DAY,
+                disclosed_quantity=iceberg_qty,
+                tag="Iceberg",
+                variety=kite.VARIETY_ICEBERG,
+                iceberg_legs = legs,iceberg_quantity = iceberg_qty
+            )
+            print(f"Order placed successfully. Order ID: {order_id}.")
+        except Exception as e:
+            print(f"An error occurred while placing the order: {e}")
 
 
 def ctc(kite):
@@ -357,7 +369,7 @@ async def fire(condition, kite, bot):
                     quantity = int(match_market_order.group(1))
                     strike = int(match_market_order.group(2))
                     banknifty_ltp = kite.ltp("NSE:NIFTY BANK")["NSE:NIFTY BANK"]["last_price"]
-                    stkm = round(banknifty_ltp + strike, -2)
+                    stkm = int(round(banknifty_ltp + strike, -2))
                     order_info = f"{contract_name}{exp}{stkm}{option_type}"
                     print(f"Market Order - Quantity: {quantity}, Strike: {stkm}")
                     print("Placing trades")
@@ -371,11 +383,25 @@ async def fire(condition, kite, bot):
                     quantity = int(match_limit_order.group(3))
                     strike = int(match_limit_order.group(4))
                     banknifty_ltp = kite.ltp("NSE:NIFTY BANK")["NSE:NIFTY BANK"]["last_price"]
-                    stkl = round(banknifty_ltp + strike, -2)
+                    stkl = int(round(banknifty_ltp + strike, -2))
                     order_info = f"{contract_name}{exp}{stkl}{option_type}"
                     print(f"Limit Order - Price: {price}, Quantity: {quantity}, Strike: {strike}")
                     await place_iceberg_limit_order(kite, order_info, quantity, price)
-                    # Add your logic for limit order here
+                    while True :
+                            orders = kite.orders()
+                            open_orders = [order for order in orders if order['status'] == 'OPEN']
+                            if not open_orders:
+                                print("No open orders found.")
+                                print("Placing SL")
+                                place_sl_order(order_info,quantity,kite)
+                                break
+                                
+                            else:
+                                # Get the latest open order
+                                latest_order = open_orders[-1]
+                                time.sleep(1)
+                                continue
+                                            # Add your logic for limit order here
 
                 elif event.message.text == '/yes':
                     print("Placing trades")
