@@ -386,7 +386,10 @@ async def fire(condition, kite, bot):
                     stkl = int(round(banknifty_ltp + strike, -2))
                     order_info = f"{contract_name}{exp}{stkl}{option_type}"
                     print(f"Limit Order - Price: {price}, Quantity: {quantity}, Strike: {strike}")
-                    await place_iceberg_limit_order(kite, order_info, quantity, price)
+                    order_id = await place_iceberg_limit_order(kite, order_info, quantity, price)
+                    order = kite.order_history(order_id)
+                    status = order['status']
+                    print("Order Status: ", status)
                     while True :
                             orders = kite.orders()
                             open_orders = [order for order in orders if order['status'] == 'OPEN']
