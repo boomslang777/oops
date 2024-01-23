@@ -1,3 +1,32 @@
+import re
+import configparser
+import pyotp
+from jugaad_trader import Zerodha
+import asyncio
+from datetime import datetime, timedelta
+
+config = configparser.ConfigParser()
+config.read('creds.ini')
+user_id = config['DEFAULT']['user_id']
+password = config['DEFAULT']['password']
+totp_secret = config['DEFAULT']['totp_secret']
+# Initialize TOTP with the secret key
+otp_gen = pyotp.TOTP(totp_secret)
+
+# Generate current OTP
+current_otp = otp_gen.now()
+
+# Initialize Zerodha class with credentials and OTP
+kite = Zerodha(user_id=user_id, password=password, twofa=current_otp)
+
+# Login to Zerodha
+login_response = kite.login()
+margins = kite.margins()
+print(margins)
+ltp = kite.ltp("NSE:POLYCAB")
+print(ltp)
+print(login_response)
+
 instrument = "BANKNIFTY"
 timeframe = "5minute"
 lots = 1
@@ -24,185 +53,6 @@ elif timeframe == "30minute" :
 elif timeframe == "60minute":
     days = 60
     mult = 60
-import pandas as pd
-import datetime
-import time
-import logging
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import StaleElementReferenceException
-from pyotp import TOTP
-import time
-from kiteconnect import KiteConnect
-import pandas_ta as ta
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-import rms
-
-# def autologin():
-#     try:
-#         token_path = "api_key.txt"
-#         key, secret, username, password, totp_secret = open(token_path, 'r').read().split()
-#         chrome_options = webdriver.ChromeOptions()
-#         chrome_options.binary_location = '/usr/bin/google-chrome-stable'
-#         service = Service(executable_path='/usr/local/bin/chromedriver')
-#         options = webdriver.ChromeOptions()
-#         options.add_argument('--headless')
-#         options.add_argument('--disable-gpu')  # Required for headless mode on Linux
-
-#         # Provide the full path to the chromedriver executable
-#         chromedriver_path = "/home/ubuntu/chromedriver-linux64/chromedriver"
-#         driver = webdriver.Chrome(service=service, options=options)
-#         logging.info("WebDriver instance created in headless mode")
-
-#         # Initialize KiteConnect with your API key
-#         kite = KiteConnect(api_key=key)
-#         logging.info("KiteConnect initialized")
-#         kite = KiteConnect(api_key=key)
-#         logging.info("KiteConnect initialized")
-
-#         # Open the Kite login page
-#         driver.get(kite.login_url())
-#         driver.implicitly_wait(10)
-#         logging.info("Kite login page opened")
-
-#         # Fill in the username and password fields
-#         username_input = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="userid"]')))
-#         password_input = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="password"]')))
-
-#         logging.info("Username and password fields located")
-
-#         username_input.send_keys(username)
-#         password_input.send_keys(password)
-
-#         # Click the "Login" button
-#         login_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="container"]/div/div/div/form/div[4]/button')))
-#         login_button.click()
-#         logging.info("Clicked the 'Login' button")
-#         time.sleep(2)
-
-#         # Generate TOTP
-#         totp = TOTP(totp_secret)
-#         token = totp.now()
-
-#         # Locate the TOTP input field and submit button
-#         totp_input = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="userid"]')))
-#         submit_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div/div/div[1]/div[2]/div/div/form/div[2]/button')))
-
-#         totp_input.send_keys(token)
-#         submit_button.click()
-#         logging.info("Filled TOTP and clicked 'Submit'")
-#         time.sleep(5)
-
-#         # Wait for successful login  # Replace with the URL you expect after login
-#         logging.info("Successfully logged in")
-
-#         # Extract the request token from the URL
-#         url = driver.current_url
-#         initial_token = url.split('request_token=')[1]
-#         request_token = initial_token.split('&')[0]
-#         print(request_token)
-
-#         # Close the WebDriver
-#         driver.quit()
-#         logging.info("WebDriver closed")
-
-#         # Initialize KiteConnect again with your API key and the new access token
-#         kite = KiteConnect(api_key=key)
-#         data = kite.generate_session(request_token,secret)
-#         access_token = kite.set_access_token(data["access_token"])
-#         print(data)
-#         logging.info("Jarvis Enabled")
-#         #store_access_token(kite.access_token)
-#         return kite
-
-#     except StaleElementReferenceException:
-#         logging.error("Stale element reference: The element is no longer valid.")
-#     except Exception as e:
-#         logging.error(f"Error during login: {str(e)}")
-
-driver = webdriver.Chrome()
-def autologin():
-    try:
-        token_path = "api_key.txt"
-        key, secret, username, password, totp_secret = open(token_path, 'r').read().split()
-
-        # Create a Chrome WebDriver instance
-        driver = webdriver.Chrome()
-        logging.info("WebDriver instance created")
-
-        # Initialize KiteConnect with your API key
-        kite = KiteConnect(api_key=key)
-        logging.info("KiteConnect initialized")
-
-        # Check if access token is stored for today
-
-        # Initialize KiteConnect with your API key
-        kite = KiteConnect(api_key=key)
-        logging.info("KiteConnect initialized")
-
-        # Open the Kite login page
-        driver.get(kite.login_url())
-        driver.implicitly_wait(10)
-        logging.info("Kite login page opened")
-
-        # Fill in the username and password fields
-        username_input = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="userid"]')))
-        password_input = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="password"]')))
-
-        logging.info("Username and password fields located")
-
-        username_input.send_keys(username)
-        password_input.send_keys(password)
-
-        # Click the "Login" button
-        login_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="container"]/div/div/div/form/div[4]/button')))
-        login_button.click()
-        logging.info("Clicked the 'Login' button")
-        time.sleep(2)
-
-        # Generate TOTP
-        totp = TOTP(totp_secret)
-        token = totp.now()
-
-        # Locate the TOTP input field and submit button
-        totp_input = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="userid"]')))
-        submit_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div/div/div[1]/div[2]/div/div/form/div[2]/button')))
-
-        totp_input.send_keys(token)
-        submit_button.click()
-        logging.info("Filled TOTP and clicked 'Submit'")
-        time.sleep(5)
-
-        # Wait for successful login  # Replace with the URL you expect after login
-        logging.info("Successfully logged in")
-
-        # Extract the request token from the URL
-        url = driver.current_url
-        print(url)
-        initial_token = url.split('request_token=')[1]
-        request_token = initial_token.split('&')[0]
-        print(request_token)
-
-        # Close the WebDriver
-        driver.quit()
-        logging.info("WebDriver closed")
-
-        # Initialize KiteConnect again with your API key and the new access token
-        kite = KiteConnect(api_key=key)
-        data = kite.generate_session(request_token,secret)
-        kite.set_access_token(data["access_token"])
-        print(data)
-        logging.info("Jarvis Enabled")
-        return kite
-
-       
-    except StaleElementReferenceException:
-        logging.error("Stale element reference: The element is no longer valid.")
-    except Exception as e:
-        logging.error(f"Error during login: {str(e)}")
 
 def run_at_915():
     from datetime import datetime, timedelta
@@ -212,7 +62,6 @@ def run_at_915():
         target_time = now.replace(hour=8, minute=15, second=0, microsecond=0)
         
         if now >= target_time:
-            kite = autologin()
             fetch_nifty_data(kite)
             break
 
@@ -225,6 +74,10 @@ def is_candle_close_below_supertrend(close_price, supertrend_value):
     return close_price < supertrend_value
 
 def fetch_nifty_data(kite):
+    import datetime
+    import pandas as pd
+    import pandas_ta as ta
+    import time
     while True:
         current_time = datetime.datetime.now().time()
         if current_time >= datetime.time(15,30):
@@ -257,15 +110,19 @@ def fetch_nifty_data(kite):
         latest_st2 = st2.iloc[-1]
         supertrend_values_st1 = latest_st1['SUPERT_5_1.5']
         supertrend_values_st2 = latest_st2['SUPERT_5_1.3']
+        print(f"supertrend 1 is {supertrend_values_st1},supertrend 2 is {supertrend_values_st2}")
+        time.sleep(30)
         if (
         is_candle_close_above_supertrend(new_data_df['close'].iloc[-1], supertrend_values_st1) and
-        is_candle_close_above_supertrend(new_data_df['close'].iloc[-1], supertrend_values_st2)
+        is_candle_close_above_supertrend(new_data_df['close'].iloc[-1], supertrend_values_st2) and
+        new_data_df['open'].iloc[-1] < supertrend_values_st2    
     ):  
             rms.fire(kite,"BUY",strike,lots,instrument,mult,token,days,timeframe)
 
         elif (
         is_candle_close_below_supertrend(new_data_df['close'].iloc[-1], supertrend_values_st1) and
-        is_candle_close_below_supertrend(new_data_df['close'].iloc[-1], supertrend_values_st2)
+        is_candle_close_below_supertrend(new_data_df['close'].iloc[-1], supertrend_values_st2) and
+        new_data_df['open'].iloc[-1] > supertrend_values_st1     
 
         ):
             rms.fire(kite,"SELL",strike,lots,instrument,mult,token,days,timeframe)  
