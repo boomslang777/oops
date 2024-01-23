@@ -7,6 +7,7 @@ def fire(kite,direction,strike,lot,instrument,mult,token,days,timeframe):
     option_type = "PE" if direction == "SELL" else "CE"
     long_leg = f"{instrument}{exp}{long_stk}{option_type}"
     short_leg = f"{instrument}{exp}{short_stk}{option_type}"
+    lot = lot*15
     place_bull_call(long_leg,lot,kite,direction)
     place_bull_call(short_leg,lot,kite,direction)
     monitor(kite,direction,long_leg,short_leg,lot,mult,token,days,timeframe)
@@ -133,7 +134,7 @@ def exit_bull_call(instrument,qty,kite,direction) :
 def square_off_all_positions(kite):
     # Fetch current positions
     positions = kite.positions()
-
+    print(positions)
     # Iterate through each position type ('net', 'day')
     for position_type in ['net']:
         # Iterate through positions of the current type
@@ -146,10 +147,9 @@ def square_off_all_positions(kite):
                 order_id = kite.place_order(variety=kite.VARIETY_REGULAR,
                                             exchange=kite.EXCHANGE_NFO,
                                             tradingsymbol=tradingsymbol,
-                                            transaction_type=kite.TRANSACTION_TYPE_BUY if position['transaction_type']=="SELL" else kite.TRANSACTION_TYPE_SELL,
+                                            transaction_type="BUY" if position['quantity'] < 0 else "SELL",
                                             quantity=quantity,
                                             product=kite.PRODUCT_NRML,
                                             order_type=kite.ORDER_TYPE_MARKET,
                                             tag="SquareOff")    
-
 
