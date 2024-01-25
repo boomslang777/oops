@@ -4,6 +4,7 @@ import pyotp
 from jugaad_trader import Zerodha
 import asyncio
 from datetime import datetime, timedelta
+import rms
 
 config = configparser.ConfigParser()
 config.read('creds.ini')
@@ -56,6 +57,7 @@ elif timeframe == "60minute":
 
 def run_at_915():
     from datetime import datetime, timedelta
+    import time
     while True:
         now = datetime.now().astimezone()
         print(now)
