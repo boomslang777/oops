@@ -1,5 +1,5 @@
 def fire(kite,direction,strike,lot,instrument,mult,token,days,timeframe):
-    square_off_all_positions(kite)
+    square_off_all_positions(kite,"algo")
     exp = get_exp()
     stk = get_stk(kite,strike,direction)
     long_stk = stk
@@ -8,8 +8,8 @@ def fire(kite,direction,strike,lot,instrument,mult,token,days,timeframe):
     long_leg = f"{instrument}{exp}{long_stk}{option_type}"
     short_leg = f"{instrument}{exp}{short_stk}{option_type}"
     lot = lot*15
-    place_bull_call(long_leg,lot,kite,direction)
-    place_bull_call(short_leg,lot,kite,direction)
+    place_bull_call(long_leg,lot,kite,"BUY")
+    place_bull_call(short_leg,lot,kite,"SELL")
     monitor(kite,direction,long_leg,short_leg,lot,mult,token,days,timeframe)
 
 
@@ -21,7 +21,7 @@ def monitor(kite,direction,long_leg,short_leg,lot,mult,token,days,timeframe):
         # if current_time >= datetime.time(15,25):
         #     print("Current time is greater than 3:25 pm. Exiting SL TRAIL.")
         #     cancel_orders(kite)
-        #     square_off_all_positions(kite)
+        #     square_off_all_positions(kite,"algo")
         #     break
         #wait_time = (60 * mult) - (current_time.second % (60 * mult))
         #time.sleep(wait_time)
@@ -51,10 +51,12 @@ def monitor(kite,direction,long_leg,short_leg,lot,mult,token,days,timeframe):
         supertrend_values_st2 = latest_st2['SUPERT_5_1.3']
         if direction == "BUY" and new_data_df['close'].iloc[-1] < supertrend_values_st1 :
             print("Square off buy position")
-            exit_bull_call(short_leg,lot,kite,"BUY")
+            # exit_bull_call(short_leg,lot,kite,"BUY")
+            square_off_all_positions(kite,"algo")
         elif direction == "SELL" and  new_data_df['close'].iloc[-1] > supertrend_values_st2 :
             print("Square off sell position")   
-            exit_bull_call(long_leg,lot,kite,"SELL")
+            # exit_bull_call(long_leg,lot,kite,"SELL")
+            square_off_all_positions(kite,"algo")
 
 def cancel_orders(kite):
     orders = kite.orders()
@@ -111,27 +113,51 @@ def place_bull_call(instrument, qty,kite,direction):
                      transaction_type=direction,
                      quantity=qty,
                      order_type="MARKET",
-                     product="NRML",
+                     product="MIS",
                      validity="DAY",
                      price=0,
-                     trigger_price=0)
+                     trigger_price=0,
+                     tag = "algo")
     print("Position entered successfully")
 
 
-def exit_bull_call(instrument,qty,kite,direction) :
-    print(instrument)
-    kite.place_order(variety=kite.VARIETY_REGULAR, exchange="NFO",
-                     tradingsymbol=instrument,
-                     transaction_type=direction,
-                     quantity=qty,
-                     order_type="MARKET",
-                     product="NRML",
-                     validity="DAY",
-                     price=0,
-                     trigger_price=0)
-    print("Position Exited successfully")
+# def exit_bull_call(instrument,qty,kite,direction) :
+#     print(instrument)
+#     kite.place_order(variety=kite.VARIETY_REGULAR, exchange="NFO",
+#                      tradingsymbol=instrument,
+#                      transaction_type=direction,
+#                      quantity=qty,
+#                      order_type="MARKET",
+#                      product="NRML",
+#                      validity="DAY",
+#                      price=0,
+#                      trigger_price=0)
+#     print("Position Exited successfully")
 
-def square_off_all_positions(kite):
+# def square_off_all_positions(kite):
+#     # Fetch current positions
+#     positions = kite.positions()
+#     print(positions)
+#     # Iterate through each position type ('net', 'day')
+#     for position_type in ['net']:
+#         # Iterate through positions of the current type
+#         for position in positions.get(position_type, []):
+#             # Extract relevant information
+#             tradingsymbol = position['tradingsymbol']
+#             quantity = position['quantity']
+#             if quantity > 0:
+#                 # Place a market sell order to square off the position
+#                 order_id = kite.place_order(variety=kite.VARIETY_REGULAR,
+#                                             exchange=kite.EXCHANGE_NFO,
+#                                             tradingsymbol=tradingsymbol,
+#                                             transaction_type="BUY" if position['quantity'] < 0 else "SELL",
+#                                             quantity=quantity,
+#                                             product=kite.PRODUCT_NRML,
+#                                             order_type=kite.ORDER_TYPE_MARKET,
+#                                             tag="SquareOff")    
+    
+
+def square_off_all_positions(kite, tag):
     # Fetch current positions
     positions = kite.positions()
     print(positions)
@@ -139,17 +165,18 @@ def square_off_all_positions(kite):
     for position_type in ['net']:
         # Iterate through positions of the current type
         for position in positions.get(position_type, []):
-            # Extract relevant information
-            tradingsymbol = position['tradingsymbol']
-            quantity = position['quantity']
-            if quantity > 0:
-                # Place a market sell order to square off the position
-                order_id = kite.place_order(variety=kite.VARIETY_REGULAR,
-                                            exchange=kite.EXCHANGE_NFO,
-                                            tradingsymbol=tradingsymbol,
-                                            transaction_type="BUY" if position['quantity'] < 0 else "SELL",
-                                            quantity=quantity,
-                                            product=kite.PRODUCT_NRML,
-                                            order_type=kite.ORDER_TYPE_MARKET,
-                                            tag="SquareOff")    
-
+            # Check if the position has the specified tag
+            if position['tag'] == tag:
+                # Extract relevant information
+                tradingsymbol = position['tradingsymbol']
+                quantity = position['quantity']
+                if quantity > 0:
+                    # Place a market sell order to square off the position
+                    order_id = kite.place_order(variety=kite.VARIETY_REGULAR,
+                                                exchange=kite.EXCHANGE_NFO,
+                                                tradingsymbol=tradingsymbol,
+                                                transaction_type="BUY" if position['quantity'] < 0 else "SELL",
+                                                quantity=quantity,
+                                                product=kite.PRODUCT_MIS,
+                                                order_type=kite.ORDER_TYPE_MARKET,
+                                                tag="SquareOff") 
